@@ -13,8 +13,10 @@ def union_events(events):
 
 def slice_intervals(records,context):
     event_groups=defaultdict(list);samples=defaultdict(list)
+    withdrawn=set(context.get('withdrawn_events',[]))
     for row in records:
-        if row['kind']=='EVENT':event_groups[row['device']].append(row)
+        if row['kind']=='EVENT':
+            if row['id'] not in withdrawn:event_groups[row['device']].append(row)
         else:samples[row['device']].append(row)
     segments=[];unions=[];cadence=context['cadence_seconds']
     for device,events in sorted(event_groups.items()):

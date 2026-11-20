@@ -7,5 +7,7 @@ def serialize(result):
     buffer=io.BytesIO()
     with zipfile.ZipFile(buffer,'w',compression=zipfile.ZIP_DEFLATED) as archive:
         archive.writestr('manifest.json',json.dumps({**result['manifest'],'revision':result.get('revision',1),'status':result.get('status','待复核')},ensure_ascii=False,indent=2))
-        archive.writestr('evidence.json',json.dumps({'counts':result['counts'],'views':result['views'],'quarantine':result['quarantine']},ensure_ascii=False,indent=2))
+        evidence={'counts':result['counts'],'views':result['views'],'quarantine':result['quarantine']}
+        if result.get('withdrawal'): evidence['withdrawal']=result['withdrawal']
+        archive.writestr('evidence.json',json.dumps(evidence,ensure_ascii=False,indent=2))
     return buffer.getvalue()

@@ -29,10 +29,16 @@
 | TRAP-06 | 全角千分位 | 静默错算或证据丢失 | 以可复核规则显式处理 | `app/modules/devices/rules.py` | `tests/test_devices.py::test_fullwidth_number` |
 | TRAP-11 | UTC归一 | 静默错算或证据丢失 | 以可复核规则显式处理 | `app/modules/devices/rules.py` | `tests/test_devices.py::test_time_equivalence` |
 | TRAP-23 | 限电区间并集 | 静默错算或证据丢失 | 以可复核规则显式处理 | `app/modules/slicing/rules.py` | `tests/test_slicing.py::test_overlapping_real` |
+| TRAP-25 | 撤回重试重复冲减 | 每次重试再减一次或丢历史 | 差额一次落账，同批号幂等返回 | `app/store.py` | `tests/test_withdraw.py::test_retry_idempotent_no_double_offset` |
+| TRAP-26 | 未闭合版本切换 | 切换失败丢旧版 | 单事务写新版+翻指针，未闭合不翻 | `app/store.py` | `tests/test_withdraw.py::test_unclosed_successor_not_released` |
 
 ## 对账规则
 
 原始逻辑输入=采纳行+隔离行+空行+重复表头+同值重复。业务计算按 DATA-DICTIONARY.md 分别核验，不能把上级与下级重复加总。所有隔离保留编号、原值、原始行号和稳定原因码。
+
+## 指令撤回裁定
+
+已签章归档不可追溯改写，值班又须在当日对账前拿到可直接使用的当前损失，故裁定：不追加独立冲销凭证，也不原地改版，而是生成单一当前有效版本——以追加新版本落地，版本间差额即冲销凭证。封存版保留原批号与凭证包；撤回的事件编号写入新版本上下文 `withdrawn_events` 重算（事件切片与对照排除均跳过撤回事件），凭证载明撤回前后损失差、仍有效事件、撤回覆盖区间去向（已恢复/仍受限/仍被有效事件覆盖/未定）与证据去向。同一撤回按内容寻址幂等，重试返回原版本不重复冲减；仅可对当前有效版本发起新撤回。版本写入与当前指针翻转为同一事务，证据未闭合（非可归档）不翻转，旧版继续放行；页面只放行证据闭合的版本，未闭合版本可查阅但标记未放行。
 
 ## 已知不覆盖
 

@@ -15,6 +15,8 @@ docker compose exec -T app pytest -q
 
 同输入与规则版本生成相同批号，只保留一条批次。复核入口 `POST /api/runs/{run_id}/review` 提交当前 `revision`，陈旧提交409。归档包只有一个下载入口 `GET /api/export/{run_id}`，含证据和运行摘要。原始隔离在页面同屏显示。
 
+限电指令撤回走 `POST /api/runs/{run_id}/withdraw`（`event_ids`、`reason`、可选 `operator`）。已签章批次不改写，撤回的指令编号写入新版本上下文重算，生成单一当前有效版本；版本间差额即冲销凭证，载明撤回前后损失差、仍有效事件、撤回覆盖区间去向与证据去向。同一撤回重试按批号幂等返回，不重复冲减；仅可对当前有效版本发起新撤回。新版本证据闭合（可归档）才在同一事务内切换为当前版本，否则保留旧版、新版标记未放行；页面只放行证据闭合的版本。`GET /api/runs/{run_id}/current` 返回该谱系当前有效版本。
+
 SQLite使用命名卷，容器重启后保留历史。要重建演示可在Compose中改用新的卷名称，保留旧卷。
 
 源码在 `app/`，样例在 `sample_data/`，测试在 `tests/`；定义见 `docs/DATA-DICTIONARY.md`，模块和边界测试对应关系见 `docs/DEPTH.md`。输入上限2MB，属于离线复核工具。

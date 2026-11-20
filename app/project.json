@@ -67,6 +67,19 @@
     "unknown_seconds": "未定 s",
     "line": "原始行",
     "_line": "原始行",
-    "detail": "原因"
+    "detail": "原因",
+    "disposition": "区间去向",
+    "voucher_id": "凭证号",
+    "loss_before_kwh": "撤回前 kWh",
+    "loss_after_kwh": "撤回后 kWh",
+    "delta_kwh": "冲减 kWh",
+    "released": "放行",
+    "operator": "经办",
+    "reason": "撤回原因",
+    "withdrawn_event_ids": "撤回事件",
+    "effective_event_ids": "仍有效事件",
+    "predecessor_run_id": "封存批次",
+    "successor_run_id": "本版批次",
+    "created_at": "创建时间"
   }
 }

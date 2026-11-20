@@ -8,6 +8,7 @@ from app.errors import BusinessError
 from app.engine import evaluate
 from app import store
 from app.archive import serialize
+from app.withdraw import plan as withdraw_plan, voucher as withdraw_voucher, closed
 
 @asynccontextmanager
 async def lifespan(app):
@@ -33,6 +34,28 @@ def rerun(run_id:str):
     if 'input_snapshot' not in previous:
         raise BusinessError('INPUT_SNAPSHOT_MISSING','旧批缺少源快照，请重新导入')
     return store.save(DB_PATH,evaluate({'dataset':previous['source']},snapshot=previous['input_snapshot']))
+@app.post('/api/runs/{run_id}/withdraw')
+def withdraw(run_id:str,payload:dict=Body(...)):
+    previous=store.get(DB_PATH,run_id)
+    full_set,now=withdraw_plan(previous,payload.get('event_ids'),payload.get('reason',''))
+    successor=evaluate({'dataset':previous['source'],'overrides':{'withdrawn_events':full_set}},snapshot=previous['input_snapshot'])
+    succ_id=successor['manifest']['run_id']
+    if store.has(DB_PATH,succ_id):
+        stored=store.get(DB_PATH,succ_id);stored.update(lineage=store.lineage_of(DB_PATH,succ_id),applied=False)
+        return stored
+    lineage=store.lineage_of(DB_PATH,run_id)
+    if not lineage['is_current']: raise BusinessError('NOT_CURRENT','仅可对当前有效版本发起撤回',409)
+    reason=str(payload.get('reason','')).strip();operator=str(payload.get('operator','值班员')).strip() or '值班员'
+    successor['withdrawal']=withdraw_voucher(previous,successor,now,reason,operator)
+    stored,applied=store.save_successor(DB_PATH,successor,lineage['root'],closed(successor))
+    stored.update(lineage=store.lineage_of(DB_PATH,succ_id),applied=applied)
+    return stored
+@app.get('/api/runs/{run_id}/current')
+def current(run_id:str):
+    store.get(DB_PATH,run_id)
+    lineage=store.lineage_of(DB_PATH,run_id)
+    result=store.get(DB_PATH,lineage['current']);result['lineage']=lineage
+    return result
 @app.get('/api/runs')
 def runs():
     return store.history(DB_PATH)

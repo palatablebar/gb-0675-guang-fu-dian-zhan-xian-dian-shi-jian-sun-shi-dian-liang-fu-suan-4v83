@@ -3,6 +3,7 @@ from app.coerce import number,instant
 
 def estimate(segment,records,context):
     base={**segment,'baseline_kw':None,'reference_ids':[]}
+    withdrawn=set(context.get('withdrawn_events',[]))
     if segment['actual_kw'] is None:return {**base,'code':'TARGET_GAP'}
     if segment['status']!='健康':return {**base,'code':'TARGET_FAULT'}
     target=context['devices'][segment['device']];width=number(context['irradiance_bin']);target_bin=number(segment['irradiance'])//width
@@ -12,7 +13,7 @@ def estimate(segment,records,context):
         device=context['devices'][row['device']]
         if not device['reference'] or device['zone']!=segment['zone'] or row['status']!='健康' or row['at']!=segment['sample_at']:continue
         if number(row['irradiance'])//width!=target_bin:continue
-        if any(e['kind']=='EVENT' and e['device']==row['device'] and instant(e['start'])<=instant(row['at'])<instant(e['end']) for e in records):continue
+        if any(e['kind']=='EVENT' and e['id'] not in withdrawn and e['device']==row['device'] and instant(e['start'])<=instant(row['at'])<instant(e['end']) for e in records):continue
         capacity=number(device['capacity_kw'])
         if capacity<=0:continue
         references.append((number(row['power_kw'])/capacity,row['id']))
